@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1744169390 source:/home/hero/MountPointB/OS_1/Threading Project/main.cpp
+	<iostream>
+	<pthread.h>
+	<mutex>
+	<random>
+	<unistd.h>
+
