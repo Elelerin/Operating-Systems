@@ -1,5 +1,5 @@
 *.docx
-./obj
-./bin
+obj
+bin
 *.cbp
 
