@@ -22,7 +22,7 @@ public:
     FirstFitPool(const uint32_t size) : MemoryPool(size){};
     ~FirstFitPool();
     void* allocate(const uint32_t nbytes);
-    void free(void* block) {};
+    void free(void* block);
     void debugPrint() ;
 private:
 
