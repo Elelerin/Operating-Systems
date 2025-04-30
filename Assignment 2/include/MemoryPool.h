@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstdio>
+#include <limits.h>
 #pragma pack(1)
 
 class MemoryPool{
@@ -21,6 +22,17 @@ class FirstFitPool : virtual public MemoryPool{
 public:
     FirstFitPool(const uint32_t size) : MemoryPool(size){};
     ~FirstFitPool();
+    void* allocate(const uint32_t nbytes);
+    void free(void* block);
+    void debugPrint() ;
+private:
+
+};
+
+class BestFitPool : virtual public MemoryPool{
+public:
+    BestFitPool(const uint32_t size) : MemoryPool(size){};
+    ~BestFitPool() {};
     void* allocate(const uint32_t nbytes);
     void free(void* block);
     void debugPrint() ;
