@@ -1,6 +1,10 @@
 #include "../include/MemoryPool.h"
-#define SECTOR_END 45
+#define SECTOR_END 0xFFFFFF
 #include <iostream>
+
+#define __toInteger(currentLook) *(int32_t*)currentLook
+#define __freeSpace(currentLook) abs(*(int32_t*)currentLook)
+
 struct dataVariable{
     int32_t size;
     void* data;
@@ -21,11 +25,27 @@ void MemoryPool::free(void* block){
 
 };
 
-#define __toInteger(currentLook) *(int32_t*)currentLook
-#define __freeSpace(currentLook) abs(*(int32_t*)currentLook)
-void* FirstFitPool::allocate(const uint32_t nBytes){
+void* MemoryPool::cyclePool(){
+    void* currentLook = this->allocatedMemory;
+    while(__toInteger(currentLook) <= 0){
+        currentLook += __freeSpace(currentLook) + 4;
+        if(__toInteger(currentLook) == SECTOR_END){
+            printf("CYCLE POOL ERROR: DATAPOOL IS EMPTY\n");
+            return nullptr;
+        }
+    }
+    return currentLook;
+}
+
+
+void* FirstFitPool::allocate(uint32_t nBytes){
     void* currentLook = allocatedMemory;
     uint32_t freeMem = 0;
+
+    if(nBytes == 0){
+        printf("ERROR: CANNOT ALLOCATE 0 MEMORY");
+        return nullptr;
+    }
 
     while(__toInteger(currentLook) != SECTOR_END) {
         if(__toInteger(currentLook) < 0) { //Free block
@@ -33,8 +53,7 @@ void* FirstFitPool::allocate(const uint32_t nBytes){
             //Try to merge with next free blocks
             void* tempLook = (void*)((char*)currentLook + freeMem + 4);
             while(__toInteger(tempLook) < 0 && __toInteger(tempLook) != SECTOR_END) {
-                freeMem += __freeSpace(tempLook) + 4;
-                __toInteger(currentLook) = -freeMem;
+                __toInteger(currentLook) -= (__freeSpace(tempLook) + 4);
                 tempLook = (void*)((char*)tempLook + __freeSpace(tempLook) + 4 + 1);
             }
             //Check if this block is large enough
@@ -44,12 +63,12 @@ void* FirstFitPool::allocate(const uint32_t nBytes){
                 __toInteger(currentLook) = nBytes; //Mark allocated
                 void* userData = (void*)((char*)currentLook + 4);
                 void* nextBlock = (void*)((char*)currentLook + 4 + nBytes);
-                if(freeSectorSize >= 4) {
-                    __toInteger(nextBlock) = -freeSectorSize; //New free block
+                if(freeSectorSize < 4) {
+                    __toInteger(currentLook) += freeSectorSize + 4
+                    ;
+
                 }else{
-                    std::cout << __toInteger(currentLook) << std::endl;
-                    __toInteger(currentLook) += freeSectorSize;
-                    std::cout << __toInteger(currentLook) << std::endl;
+                    __toInteger(nextBlock) = -freeSectorSize;
                 }
                 return userData;
             }
@@ -61,13 +80,18 @@ void* FirstFitPool::allocate(const uint32_t nBytes){
     return nullptr;
 }
 
-//TODO: Move block consolidation code into here.
 void FirstFitPool::free(void* block){
     //Set the void to negative. This marks it as free w/ enough space.
     //We have to shift back because of the integer at the starting spot.
     void* align = block - 4;
-    printf("INTEGER: %d\n", __toInteger(align));
+    int32_t freeMem = __freeSpace(align);
+    void* tempLook = (void*)((char*)align + freeMem + 4);
+
     __toInteger(align) = -(__toInteger(align));
+    while(__toInteger(tempLook) < 0 && __toInteger(tempLook) != SECTOR_END) {
+        __toInteger(align) -= (__freeSpace(tempLook) + 4);
+        tempLook = (void*)((char*)tempLook + __freeSpace(tempLook) + 4 + 1);
+    }
 }
 
 
@@ -89,7 +113,7 @@ void FirstFitPool::debugPrint() {
         currentLook = (void*)((char*)currentLook + __freeSpace(currentLook) + 4);
         currBlock++;
     }
-
+    printf("\n");
     #define DEBUG 0
     #if DEBUG == 1
     //Playing blind here. Using this to figure out where the formulas I'm writing are aligning cause I had issues.
@@ -104,11 +128,16 @@ void FirstFitPool::debugPrint() {
 
 FirstFitPool::~FirstFitPool() {}
 
-void* BestFitPool::allocate(const uint32_t nBytes){
+void* BestFitPool::allocate(uint32_t nBytes){
     void* currentLook = this->allocatedMemory;
     uint32_t freeMem = 0;
     uint32_t bestSize = INT_MAX;
     void* bestLocation = nullptr;
+
+    if(nBytes == 0){
+        printf("ERROR: CANNOT ALLOCATE 0 MEMORY");
+        return nullptr;
+    }
 
     while(__toInteger(currentLook) != SECTOR_END) {
         if(__toInteger(currentLook) < 0) { //Free block
