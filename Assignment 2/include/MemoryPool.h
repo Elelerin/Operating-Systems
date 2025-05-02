@@ -11,8 +11,8 @@ public:
     MemoryPool(const uint32_t size);
     ~MemoryPool();
     virtual void * allocate(uint32_t nbytes) = 0;
-    virtual void free(void * block) = 0;
-    virtual void debugPrint() = 0;
+    virtual void free(void * block);
+    virtual void debugPrint();
     void* cyclePool();
 protected:
     uint32_t poolSize;
@@ -22,10 +22,10 @@ protected:
 class FirstFitPool : virtual public MemoryPool{
 public:
     FirstFitPool(const uint32_t size) : MemoryPool(size){};
-    ~FirstFitPool();
+    ~FirstFitPool() { MemoryPool::~MemoryPool(); };
     void* allocate(uint32_t nbytes);
-    void free(void* block);
-    void debugPrint() ;
+    void free(void* block) { MemoryPool::free(block); };
+    void debugPrint() { MemoryPool::debugPrint(); };
 private:
 
 };
@@ -33,10 +33,10 @@ private:
 class BestFitPool : virtual public MemoryPool{
 public:
     BestFitPool(const uint32_t size) : MemoryPool(size){};
-    ~BestFitPool() {};
+    ~BestFitPool() { MemoryPool::~MemoryPool(); };
     void* allocate(uint32_t nbytes);
-    void free(void* block);
-    void debugPrint();
+    void free(void* block) { MemoryPool::free(block); };
+    void debugPrint() { MemoryPool::debugPrint(); };
 private:
 
 };

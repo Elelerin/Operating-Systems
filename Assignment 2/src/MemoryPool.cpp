@@ -5,10 +5,9 @@
 #define __toInteger(currentLook) *(int32_t*)currentLook
 #define __freeSpace(currentLook) abs(*(int32_t*)currentLook)
 
-struct dataVariable{
-    int32_t size;
-    void* data;
-};
+//Data Variables are
+//4 bytes -- Size Header
+//N bytes -- Allocated Space
 
 MemoryPool::MemoryPool(const uint32_t size){
     poolSize = size;
@@ -18,11 +17,21 @@ MemoryPool::MemoryPool(const uint32_t size){
 }
 
 MemoryPool::~MemoryPool(){
-
+    free(this->allocatedMemory);
 }
 
 void MemoryPool::free(void* block){
+     //Set the void to negative. This marks it as free w/ enough space.
+    //We have to shift back because of the integer at the starting spot.
+    void* align = block - 4;
+    int32_t freeMem = __freeSpace(align);
+    void* tempLook = (void*)((char*)align + freeMem + 4);
 
+    __toInteger(align) = -(__toInteger(align));
+    while(__toInteger(tempLook) < 0 && __toInteger(tempLook) != SECTOR_END) {
+        __toInteger(align) -= (__freeSpace(tempLook) + 4);
+        tempLook = (void*)((char*)tempLook + __freeSpace(tempLook) + 4 + 1);
+    }
 };
 
 void* MemoryPool::cyclePool(){
@@ -37,6 +46,34 @@ void* MemoryPool::cyclePool(){
     return currentLook;
 }
 
+void MemoryPool::debugPrint(){
+    void* currentLook = this->allocatedMemory;
+    uint32_t currBlock = 0;
+    int shift = 0;
+
+    while(__toInteger(currentLook) != SECTOR_END){
+        shift += __freeSpace(currentLook) + 4;
+        printf("CURRENT BLOCK %4d, SIZE: %d, ALLOCATED:%s, shift:%d\n",
+               currBlock,
+               __freeSpace(currentLook),
+               __toInteger(currentLook) < 0 ? "FLSE" : "TRUE",
+               shift);
+
+
+        currentLook = (void*)((char*)currentLook + __freeSpace(currentLook) + 4);
+        currBlock++;
+    }
+    printf("\n");
+    #define DEBUG 0
+    #if DEBUG == 1
+    //Playing blind here. Using this to figure out where the formulas I'm writing are aligning cause I had issues.
+    currentLook = this->allocatedMemory;
+    for(int i = 0;i < 100; i++){
+        printf("%d: %d\n", i, __toInteger(currentLook));
+        currentLook ++;
+    }
+    #endif
+}
 
 void* FirstFitPool::allocate(uint32_t nBytes){
     void* currentLook = allocatedMemory;
@@ -79,54 +116,6 @@ void* FirstFitPool::allocate(uint32_t nBytes){
     printf("Error. Out of allocateable space\n");
     return nullptr;
 }
-
-void FirstFitPool::free(void* block){
-    //Set the void to negative. This marks it as free w/ enough space.
-    //We have to shift back because of the integer at the starting spot.
-    void* align = block - 4;
-    int32_t freeMem = __freeSpace(align);
-    void* tempLook = (void*)((char*)align + freeMem + 4);
-
-    __toInteger(align) = -(__toInteger(align));
-    while(__toInteger(tempLook) < 0 && __toInteger(tempLook) != SECTOR_END) {
-        __toInteger(align) -= (__freeSpace(tempLook) + 4);
-        tempLook = (void*)((char*)tempLook + __freeSpace(tempLook) + 4 + 1);
-    }
-}
-
-
-//Probably will be the same for both of these
-void FirstFitPool::debugPrint() {
-    void* currentLook = this->allocatedMemory;
-    uint32_t currBlock = 0;
-    int shift = 0;
-
-    while(__toInteger(currentLook) != SECTOR_END){
-        shift += __freeSpace(currentLook) + 4;
-        printf("CURRENT BLOCK %4d, SIZE: %d, ALLOCATED:%s, shift:%d\n",
-               currBlock,
-               __freeSpace(currentLook),
-               __toInteger(currentLook) < 0 ? "FLSE" : "TRUE",
-               shift);
-
-
-        currentLook = (void*)((char*)currentLook + __freeSpace(currentLook) + 4);
-        currBlock++;
-    }
-    printf("\n");
-    #define DEBUG 0
-    #if DEBUG == 1
-    //Playing blind here. Using this to figure out where the formulas I'm writing are aligning cause I had issues.
-    currentLook = this->allocatedMemory;
-    for(int i = 0;i < 100; i++){
-        printf("%d: %d\n", i, __toInteger(currentLook));
-        currentLook ++;
-    }
-    #endif
-};
-
-
-FirstFitPool::~FirstFitPool() {}
 
 void* BestFitPool::allocate(uint32_t nBytes){
     void* currentLook = this->allocatedMemory;
@@ -183,42 +172,6 @@ void* BestFitPool::allocate(uint32_t nBytes){
     return nullptr;
 }
 
-void BestFitPool::free(void* block){
-    //Set the void to negative. This marks it as free w/ enough space.
-    //We have to shift back because of the integer at the starting spot.
-    void* align = block - 4;
-    printf("INTEGER: %d\n", __toInteger(align));
-    __toInteger(align) = -(__toInteger(align));
-}
-
-void BestFitPool::debugPrint() {
-    void* currentLook = this->allocatedMemory;
-    uint32_t currBlock = 0;
-    int shift = 0;
-
-    while(__toInteger(currentLook) != SECTOR_END){
-        shift += __freeSpace(currentLook) + 4;
-        printf("CURRENT BLOCK %4d, SIZE: %d, ALLOCATED:%s, shift:%d\n",
-               currBlock,
-               __freeSpace(currentLook),
-               __toInteger(currentLook) < 0 ? "FLSE" : "TRUE",
-               shift);
-
-
-        currentLook = (void*)((char*)currentLook + __freeSpace(currentLook) + 4);
-        currBlock++;
-    }
-
-    #define DEBUG 0
-    #if DEBUG == 1
-    //Playing blind here. Using this to figure out where the formulas I'm writing are aligning cause I had issues.
-    currentLook = this->allocatedMemory;
-    for(int i = 0;i < 100; i++){
-        printf("%d: %d\n", i, __toInteger(currentLook));
-        currentLook ++;
-    }
-    #endif
-};
 
 
 
