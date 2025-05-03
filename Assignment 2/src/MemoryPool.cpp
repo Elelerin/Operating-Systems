@@ -155,15 +155,13 @@ void* BestFitPool::allocate(uint32_t nBytes){
     if(bestLocation != nullptr){
         //Allocate here
         int32_t freeSectorSize = freeMem - 4 - nBytes;
-        __toInteger(bestLocation) = nBytes;
+        __toInteger(bestLocation) = nBytes; //Mark allocated
         void* userData = (void*)((char*)bestLocation + 4);
         void* nextBlock = (void*)((char*)bestLocation + 4 + nBytes);
-        if(freeSectorSize >= 4) {
-            __toInteger(nextBlock) = -freeSectorSize; //New free block
+        if(freeSectorSize < 4) {
+            __toInteger(bestLocation) += freeSectorSize + 4;
         }else{
-            std::cout << __toInteger(bestLocation) << std::endl;
-            __toInteger(bestLocation) += freeSectorSize;
-            std::cout << __toInteger(bestLocation) << std::endl;
+            __toInteger(nextBlock) = -freeSectorSize;
         }
         return userData;
     }
